@@ -27,7 +27,7 @@ const useCanvas = ({ draw, canvasRef }: Props) => {
         resizeCanvas();
 
         const render = () => {
-            frameCount++; frameCount %= 10000;
+            frameCount++; frameCount %= 50000;
             draw(canvas, context, frameCount);
 
             // https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
