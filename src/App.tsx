@@ -10,6 +10,8 @@ export default function App() {
   const player = new AudioPlayer();
   const { enqueueSnackbar } = useSnackbar();
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>();
+  const [loop, setLoop] = useState(false);
+  const [userMarkers, setUserMarkers] = useState<number[]>([]);
 
   async function loadFile(file: File) {
     const buff = await player.loadFile(file);
@@ -26,7 +28,7 @@ export default function App() {
       player.start();
     }
     catch {
-      enqueueSnackbar("error");
+      enqueueSnackbar("No file is loaded.", { variant:'error' });
     }
   }
   function stopPlayback() {
@@ -44,6 +46,13 @@ export default function App() {
     await loadFile(file);
   };
 
+  const resetMarkers = () => {
+    player.setUserStartMarker(0);
+    if (userMarkers.length) {
+      setUserMarkers([]);
+    }
+  }
+
   return (
     <div className="bg-indigo-900 p-4 space-y-4 text-fuchsia-400">
       <div className="flex flex-row justify-between items-center p-2 gap-4 h-24 bg-amber-700 shadow-amber-800 shadow-[4px_4px_0_0_#4c1d95]">
@@ -57,11 +66,15 @@ export default function App() {
           <PrimaryButton onClick={resumePlayback}>Resume</PrimaryButton>
           <PrimaryButton onClick={detuneSemitoneDown}>Downtune</PrimaryButton>
           <PrimaryButton onClick={detuneSemitoneUp}>Uptune</PrimaryButton>
+          <PrimaryButton onClick={resetMarkers}>Reset Markers</PrimaryButton>
           <PrimaryButton onClick={whiteNoise}>White Noise</PrimaryButton>
         </div>
 
         <div>
-          <Checkbox label="Enable loop" />
+          <Checkbox label="Enable loop" checked={loop} onChange={(checked) => {
+            player.setLoop(checked);
+            setLoop(checked);
+          }} />
         </div>
       </div>
 
@@ -69,6 +82,8 @@ export default function App() {
         player={player}
         audioBuffer={audioBuffer}
         className="w-full h-[82vh]"
+        userMarkers={userMarkers}
+        setUserMarkers={setUserMarkers}
       />
 
     </div>
