@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AudioPlayer } from "../AudioPlayer/AudioPlayer";
 import Canvas from "../Common/Canvas";
 import { secondsToMinutes } from "../Utils/Time";
+import { useSnackbar } from "notistack";
 
 interface Props {
     player: AudioPlayer,
@@ -12,6 +13,8 @@ interface Props {
 const AudioWaveform = ({ player, audioBuffer, className = '' }: Props) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [clicked, setClicked] = useState<number[]>([]);
+    const { enqueueSnackbar } = useSnackbar();
+
     const barCount = 500;
 
     const drawCoolSineWave = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, frameCount: number) => {
@@ -73,7 +76,7 @@ const AudioWaveform = ({ player, audioBuffer, className = '' }: Props) => {
 
         ctx.fillStyle = "#FFF"
         ctx.font = "32px Roboto";
-        ctx.fillText(secondsToMinutes(currentOffset), 10, 40);
+        ctx.fillText(secondsToMinutes(currentOffset <= duration ? currentOffset : duration), 10, 40);
         ctx.fillText(secondsToMinutes(duration), 1368, 40);
     }
 
@@ -81,12 +84,13 @@ const AudioWaveform = ({ player, audioBuffer, className = '' }: Props) => {
         if (!canvasRef.current) return;
         const canvas = canvasRef.current;
 
+
         const handleClick = (ev: PointerEvent) => {
             const rect = canvas.getBoundingClientRect();
             const x = ev.clientX - rect.left; // x relative to canvas;
             const barWidth = rect.width / barCount;
             const clickedIndex = Math.floor(x / barWidth);
-            
+
             // Allow a maximum of 2 elements. If 2 are present, remove the first one
             const newMarkers = clicked.slice(-1)
             newMarkers.push(clickedIndex);
@@ -100,8 +104,29 @@ const AudioWaveform = ({ player, audioBuffer, className = '' }: Props) => {
             player.setUserStartMarker(marker);
         }
 
+        const handleKeyUp = (ev: KeyboardEvent) => {
+            if (ev.code === 'Space') {
+                try {
+                    if (!player.isPaused()) {
+                        player.stop();
+                    } else {
+                        player.start();
+                    }
+                }
+                catch {
+                    enqueueSnackbar("error");
+                }
+            }
+        };
+
+        window.addEventListener('keyup', handleKeyUp);
         canvas.addEventListener('click', handleClick);
-        return () => canvas.removeEventListener('click', handleClick);
+
+        return () => {
+            canvas.removeEventListener('click', handleClick);
+            window.removeEventListener('keyup', handleKeyUp);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [audioBuffer, clicked, player])
 
     return <Canvas canvasRef={canvasRef} className={className} draw={audioBuffer ? drawAudioWaveform : drawCoolSineWave} />;

@@ -168,7 +168,12 @@ export class AudioPlayer {
     this.stop(); this.start();
   }
 
+  isPaused() {
+    return this.paused;
+  }
+
   async loadFile(file: File): Promise<AudioBuffer> {
+    this.stop(); this.playbackOffset = 0; this.startTime = 0; this.startUserMarker = 0;
     const arrBuffer = await file.arrayBuffer();
     this.buffer = await this.audioCtx.decodeAudioData(arrBuffer);
     return this.buffer;
@@ -186,6 +191,7 @@ export class AudioPlayer {
 
   start() {
     if (!this.buffer) throw new Error("No buffer can be loaded.");
+    this.stop();
 
     this.playbackOffset = this.startUserMarker;
     this.startTime = this.audioCtx.currentTime;
