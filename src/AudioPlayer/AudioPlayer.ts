@@ -1,152 +1,3 @@
-/**
- * ================================
- * WEB AUDIO API – MENTAL MODEL
- * ================================
- *
- * Web Audio works like a signal graph:
- *
- *   Audio Source → Processing Nodes → Output
- *
- * Sound always flows forward through connected nodes.
- * Nodes do NOT own each other — they are connected with virtual “cables”.
- */
-
-/**
- * AudioContext
- * ------------
- * The audio engine / runtime.
- *
- * - Owns the audio thread, timing, and sample rate
- * - All audio nodes must be created from ONE AudioContext
- * - If the context is suspended or closed, nothing can play
- *
- * Mental model:
- *   "If the AudioContext isn't running, my app is silent."
- *
- * Typical usage:
- * - Create once for the whole app
- * - Reuse for all sounds
- * - Optionally suspend/resume for global pause
- *
- * Docs:
- * * https://developer.mozilla.org/en-US/docs/Web/API/AudioContext
- */
-
-/**
- * AudioBuffer
- * -----------
- * Raw decoded audio data stored in memory.
- *
- * - Contains PCM samples (like a WAV file in RAM)
- * - Does NOT play sound
- * - Has no timing or playback state
- * - Can be reused infinitely
- *
- * Mental model:
- *   "This is audio data, not a player."
- *
- * Important:
- * - Multiple AudioBufferSourceNodes can read from the same AudioBuffer
- * - Buffers are safe to cache and reuse
- *
- * Docs:
- * * https://developer.mozilla.org/en-US/docs/Web/API/AudioBuffer
- */
-
-/**
- * AudioBufferSourceNode
- * --------------------
- * One-shot playback node.
- *
- * - Reads audio data from an AudioBuffer
- * - Pushes sound into the audio graph
- * - Controls playback rate and detune (pitch)
- *
- * VERY IMPORTANT RULES:
- * - Can only be started ONCE
- * - Cannot be paused
- * - Once stopped or finished, it is dead forever
- *
- * Mental model:
- *   "This is a disposable tape deck."
- *
- * Implications:
- * - You must create a NEW source node every time you play
- * - Detune / playbackRate must be reapplied for each new source
- *
- * Docs:
- * * https://developer.mozilla.org/en-US/docs/Web/API/AudioBufferSourceNode
- */
-
-/**
- * GainNode
- * --------
- * Volume and mute control.
- *
- * - Multiplies the audio signal
- * - Used for volume sliders, fades, and muting
- *
- * Mental model:
- *   "This is the volume knob."
- *
- * Why it matters:
- * - You should NOT use source.stop() to control volume
- * - GainNode allows smooth fades and fake pause
- *
- * Common patterns:
- * - Volume control
- * - Mute / unmute
- * - Fade in / fade out
- *
- * Docs:
- * * https://developer.mozilla.org/en-US/docs/Web/API/GainNode
- */
-
-/**
- * AudioDestinationNode
- * -------------------
- * Final audio output (the speakers).
- *
- * - Usually audioContext.destination
- * - If sound does not reach this node, it is inaudible
- *
- * Mental model:
- *   "This is the speakers."
- *
- * Docs:
- * https://developer.mozilla.org/en-US/docs/Web/API/AudioDestinationNode
- */
-
-/**
- * ================================
- * CUSTOM AUDIO PLAYER ARCHITECTURE
- * ================================
- *
- * Required components:
- *
- * - AudioContext               → engine
- * - AudioBuffer                → audio data
- * - AudioBufferSourceNode      → playback (one-shot)
- * - GainNode                   → volume / mute
- *
- * Typical signal flow:
- *
- *   AudioBuffer
- *       ↓
- *   AudioBufferSourceNode (playback + pitch)
- *       ↓
- *   GainNode (volume / mute)
- *       ↓
- *   AudioContext.destination (speakers)
- *
- * Playback rules summary:
- * - Play: create a new source node
- * - Stop: stop and discard the source
- * - Replay: create a new source
- * - Pause: fake with GainNode OR rebuild source with offset
- * - Detune: set on the source node every time
- */
-
 export class AudioPlayer {
   private audioCtx = new AudioContext();
   private buffer: AudioBuffer | undefined = undefined;
@@ -155,22 +6,10 @@ export class AudioPlayer {
   private startTime: number = 0;
   private playbackOffset: number = 0;
   private paused = true;
+  private loop = false;
 
   private startUserMarker: number = 0;
-  // private endUserMarker: number = 0;
-
-  /**  
-   * EXPECTS THE MARKER TO BE THE CURRENT FRAME!
-   */
-  setUserStartMarker(marker: number) {
-    // Transform current frame into seconds
-    this.startUserMarker = marker / this.audioCtx.sampleRate;
-    this.stop(); this.start();
-  }
-
-  isPaused() {
-    return this.paused;
-  }
+  private endUserMarker: number = 0;
 
   async loadFile(file: File): Promise<AudioBuffer> {
     this.stop(); this.playbackOffset = 0; this.startTime = 0; this.startUserMarker = 0;
@@ -180,27 +19,53 @@ export class AudioPlayer {
   }
 
   currentOffset(): number {
-    if (!this.paused)
-      return this.audioCtx.currentTime - this.startTime + this.playbackOffset;
-    return this.playbackOffset;
-  }
+    if (this.paused) {
+      return this.playbackOffset;
+    }
 
-  getBufferDurationInSeconds(): number {
-    return this.buffer?.duration ?? 0;
+    const now = this.audioCtx.currentTime;
+    const elapsed = now - this.startTime;
+
+    const loopStart = this.source.loopStart;
+    const loopEnd = this.source.loopEnd;
+    const loopDuration = loopEnd - loopStart;
+
+    const absolute = this.playbackOffset + elapsed;
+
+    if (!this.loop || loopDuration <= 0) {
+      return Math.min(absolute, this.getBufferDurationInSeconds());
+    }
+
+    if (absolute < loopEnd) {
+      return absolute;
+    }
+
+    return loopStart + ((absolute - loopStart) % loopDuration);
   }
 
   start() {
-    if (!this.buffer) throw new Error("No buffer can be loaded.");
+    if (!this.buffer) throw new Error("No buffer loaded.");
     this.stop();
 
-    this.playbackOffset = this.startUserMarker;
-    this.startTime = this.audioCtx.currentTime;
-    this.source = this.audioCtx.createBufferSource();
-    this.paused = false;
+    const now = this.audioCtx.currentTime;
 
+    if (this.startUserMarker >= this.buffer.duration) {
+      throw new Error("loopStart must be < buffer duration");
+    }
+
+    this.source = this.audioCtx.createBufferSource();
     this.source.buffer = this.buffer;
-    this.source.start(0, this.startUserMarker);
+
+    this.source.loop = this.loop;
+    this.source.loopStart = this.startUserMarker;
+    this.source.loopEnd = this.endUserMarker === 0 ? this.buffer.duration : this.endUserMarker;
+
     this.source.connect(this.audioCtx.destination);
+    this.source.start(now, this.startUserMarker);
+
+    this.startTime = now;
+    this.playbackOffset = this.startUserMarker;
+    this.paused = false;
   }
 
   resume() {
@@ -217,13 +82,10 @@ export class AudioPlayer {
   }
 
   stop() {
-    if (!this.source) return;
-    if (this.paused) return;
+    if (!this.source || this.paused) return;
 
+    this.playbackOffset = this.currentOffset();
     this.source.stop();
-    const elapsed = this.audioCtx.currentTime - this.startTime;
-
-    this.playbackOffset += elapsed;
     this.paused = true;
   }
 
@@ -268,9 +130,30 @@ export class AudioPlayer {
     source.start();
   }
 
+  getBufferDurationInSeconds(): number {
+    return this.buffer?.duration ?? 0;
+  }
+
+  /**  
+   * EXPECTS THE MARKER TO BE THE CURRENT FRAME!
+   */
+  setUserStartMarker(marker: number) {
+    // Transform current frame into seconds
+    this.startUserMarker = marker / this.audioCtx.sampleRate;
+    if (marker !== 0) {
+      this.stop(); this.start();
+    }
+  }
+
+  setUserEndMarker(marker: number) {
+    this.endUserMarker = marker / this.audioCtx.sampleRate;
+  }
+
+  isPaused() { return this.paused }
+  setLoop(value: boolean) { this.loop = value }
+  getLoop() { return this.loop }
   getContext() { return this.audioCtx }
   getAudioBuffer() { return this.buffer }
-
   detuneSemitoneDown() { this.source.detune.value -= 100 }
   detuneSemitoneUp() { this.source.detune.value += 100 }
 }
