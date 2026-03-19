@@ -38,13 +38,15 @@ export class AudioPlayer {
     }
 
     const now = this.audioCtx.currentTime;
-    const elapsed = now - this.startTime;
+    const realElapsed = now - this.startTime;
+    const rate = Math.pow(2, this.detune / 1200);
+    const audioElapsed = realElapsed * rate;
 
     const loopStart = this.source.loopStart;
     const loopEnd = this.source.loopEnd;
     const loopDuration = loopEnd - loopStart;
 
-    const absolute = this.playbackOffset + elapsed;
+    const absolute = this.playbackOffset + audioElapsed;
 
     if (!this.loop || loopDuration <= 0) {
       return Math.min(absolute, this.getBufferDurationInSeconds());
@@ -123,6 +125,10 @@ export class AudioPlayer {
   getAudioBuffer() { return this.buffer; }
   
   setDetuneSemitones(detune: number) {
+    if (!this.paused && this.source) {
+      this.playbackOffset = this.currentOffset();
+      this.startTime = this.audioCtx.currentTime;
+    }
     this.detune = 100 * detune;
     if (this.source) {
       this.source.detune.value = this.detune;

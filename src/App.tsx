@@ -52,8 +52,16 @@ export default function App() {
           <PrimaryButton onClick={playFile}>Play</PrimaryButton>
           <PrimaryButton onClick={() => playerRef.current.stop()}>Stop</PrimaryButton>
           <PrimaryButton onClick={() => playerRef.current.resume()}>Resume</PrimaryButton>
-          <PrimaryButton onClick={() => playerRef.current.setDetuneSemitones(detune)}>Downtune</PrimaryButton>
-          <PrimaryButton onClick={() => playerRef.current.setDetuneSemitones(detune)}>Uptune</PrimaryButton>
+          <PrimaryButton onClick={() => {
+            const newDetune = detune - 1;
+            setDetune(newDetune);
+            playerRef.current.setDetuneSemitones(newDetune);
+          }}>Downtune</PrimaryButton>
+          <PrimaryButton onClick={() => {
+            const newDetune = detune + 1;
+            setDetune(newDetune);
+            playerRef.current.setDetuneSemitones(newDetune);
+          }}>Uptune</PrimaryButton>
           <PrimaryButton onClick={resetMarkers}>Reset Markers</PrimaryButton>
         </div>
 
