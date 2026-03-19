@@ -17,6 +17,7 @@ export default function App() {
   async function loadFile(file: File) {
     const buff = await playerRef.current.loadFile(file);
     setAudioBuffer(buff);
+    setUserMarkers([]);
   }
   
   function playFile() {
