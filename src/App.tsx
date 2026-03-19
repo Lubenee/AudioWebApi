@@ -1,45 +1,33 @@
 import { AudioPlayer } from "./AudioPlayer/AudioPlayer";
 import PrimaryButton from "./Common/PrimaryButton";
 import AudioWaveform from "./AudioWaveform/AudioWaveform";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Checkbox } from "./Common/Checkbox";
 import AudioUpload from "./Common/Uploader";
 import { useSnackbar } from "notistack";
 
 export default function App() {
-  const player = new AudioPlayer();
   const { enqueueSnackbar } = useSnackbar();
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>();
-  const [loop, setLoop] = useState(false);
   const [userMarkers, setUserMarkers] = useState<number[]>([]);
+  const playerRef = useRef<AudioPlayer>(new AudioPlayer());
+  const [loop, setLoop] = useState(false);
+  const [detune, setDetune] = useState(0);
 
   async function loadFile(file: File) {
-    const buff = await player.loadFile(file);
+    const buff = await playerRef.current.loadFile(file);
     setAudioBuffer(buff);
   }
-  function detuneSemitoneDown() {
-    player.detuneSemitoneDown();
-  }
-  function detuneSemitoneUp() {
-    player.detuneSemitoneUp();
-  }
+  
   function playFile() {
     try {
-      player.start();
+      playerRef.current.start();
     }
     catch {
       enqueueSnackbar("No file is loaded.", { variant:'error' });
     }
   }
-  function stopPlayback() {
-    player.stop();
-  }
-  function resumePlayback() {
-    player.resume();
-  }
-  function whiteNoise() {
-    player.playWhiteNoise();
-  }
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -47,7 +35,7 @@ export default function App() {
   };
 
   const resetMarkers = () => {
-    player.setUserStartMarker(0);
+    playerRef.current.setUserStartMarker(0);
     if (userMarkers.length) {
       setUserMarkers([]);
     }
@@ -62,24 +50,23 @@ export default function App() {
 
         <div className="flex flex-row justify-center items-center gap-3">
           <PrimaryButton onClick={playFile}>Play</PrimaryButton>
-          <PrimaryButton onClick={stopPlayback}>Stop</PrimaryButton>
-          <PrimaryButton onClick={resumePlayback}>Resume</PrimaryButton>
-          <PrimaryButton onClick={detuneSemitoneDown}>Downtune</PrimaryButton>
-          <PrimaryButton onClick={detuneSemitoneUp}>Uptune</PrimaryButton>
+          <PrimaryButton onClick={() => playerRef.current.stop()}>Stop</PrimaryButton>
+          <PrimaryButton onClick={() => playerRef.current.resume()}>Resume</PrimaryButton>
+          <PrimaryButton onClick={() => playerRef.current.setDetuneSemitones(detune)}>Downtune</PrimaryButton>
+          <PrimaryButton onClick={() => playerRef.current.setDetuneSemitones(detune)}>Uptune</PrimaryButton>
           <PrimaryButton onClick={resetMarkers}>Reset Markers</PrimaryButton>
-          <PrimaryButton onClick={whiteNoise}>White Noise</PrimaryButton>
         </div>
 
         <div>
           <Checkbox label="Enable loop" checked={loop} onChange={(checked) => {
-            player.setLoop(checked);
+            playerRef.current.setLoop(checked);
             setLoop(checked);
           }} />
         </div>
       </div>
 
       <AudioWaveform
-        player={player}
+        player={playerRef.current}
         audioBuffer={audioBuffer}
         className="w-full h-[82vh]"
         userMarkers={userMarkers}

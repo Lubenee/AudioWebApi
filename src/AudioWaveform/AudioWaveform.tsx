@@ -61,7 +61,7 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
             const start = i * samplesPerBar;
             const end = start + samplesPerBar;
             let max = 0;
-            for (let j = start; j < end; j += 2) {
+            for (let j = start; j < end; j += 100) {
                 const val = Math.abs(channelData[j]);
                 if (val > max) max = val;
             }
@@ -79,22 +79,19 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
         }
 
         ctx.fillStyle = "#FFF"
-        ctx.font = "32px Roboto";
+        ctx.font = "28px Roboto";
         ctx.fillText(secondsToMinutes(currentOffset), 10, 40);
-        ctx.fillText(secondsToMinutes(duration), 1610, 40);
+        ctx.fillText(secondsToMinutes(duration), 1590, 40);
     }
 
     useEffect(() => {
-        if (!canvasRef.current) return;
-        const canvas = canvasRef.current;
-
         const handleKeyUp = (ev: KeyboardEvent) => {
             if (ev.code === 'Space') {
-                try { // if playing, pause. else, start.
+                try {
                     if (!player.isPaused()) {
                         player.stop();
                     } else {
-                        player.start();
+                        player.resume();
                     }
                 }
                 catch {
@@ -102,85 +99,82 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
                 }
             }
         };
-
-        const handleClick = (ev: PointerEvent) => {
-            if (drag.current.isDragging) return;
-            const rect = canvas.getBoundingClientRect();
-            const x = ev.clientX - rect.left; // x relative to canvas;
-            const barWidth = rect.width / barCount;
-            const clickedIndex = Math.floor(x / barWidth);
-            setUserMarkers([clickedIndex]);
-
-            if (!audioBuffer) return null;
-            // Calculate at which frame we're currently at
-            const channelData = audioBuffer.getChannelData(0);
-            const samplesPerBar = Math.floor(channelData.length / barCount);
-            const marker = clickedIndex * samplesPerBar;
-
-            player.setUserStartMarker(marker);
-        }
-
-        const mousedown = (e: MouseEvent) => {
-            drag.current.isDragging = false;
-            drag.current.dragStartX = e.clientX; 
-        }
-        const mousemove = (e: MouseEvent) => {
-            const dx = e.clientX - drag.current.dragStartX;
-            if (Math.abs(dx) > 3) {
-                drag.current.isDragging = true;
-            }
-        }
-        const mouseup = (e: MouseEvent) => {
-            if (!drag.current.isDragging) return;
-            const rect = canvas.getBoundingClientRect();
-            const barWidth = rect.width / barCount;
-            const dragEndX = e.clientX;
-            const dragStartX = drag.current.dragStartX;
-
-            const startXBar = dragStartX - rect.left;
-            const clickedIndex1 = Math.floor(startXBar / barWidth);
-
-            const endXBar = dragEndX - rect.left;
-            const clickedIndex2 = Math.floor(endXBar / barWidth);
-
-            if (!audioBuffer) return null;
-            // Calculate at which frame we're currently at
-            const channelData = audioBuffer.getChannelData(0);
-            const samplesPerBar = Math.floor(channelData.length / barCount);
-            const startMarker = clickedIndex1 * samplesPerBar;
-            const endMarker = clickedIndex2 * samplesPerBar;
-
-            player.setUserEndMarker(endMarker > startMarker ? endMarker : startMarker);
-            player.setUserStartMarker(startMarker < endMarker ? startMarker : endMarker);
-            setUserMarkers([clickedIndex1, clickedIndex2 - 1]);
-        }
-
         
         window.addEventListener('keyup', handleKeyUp);
-        canvas.addEventListener('click', handleClick);
-        canvas.addEventListener('mousedown', mousedown)
-        canvas.addEventListener('mousemove', mousemove);
-        canvas.addEventListener("mouseup", mouseup);
+        return () => window.removeEventListener('keyup', handleKeyUp);
+    }, [player, enqueueSnackbar])
 
-        return () => {
-            canvas.removeEventListener('click', handleClick);
-            window.removeEventListener('keyup', handleKeyUp);
-            canvas.removeEventListener('mousedown', mousedown);
-            canvas.removeEventListener('mousemove', mousemove);
-            canvas.removeEventListener("mouseup", mouseup);
+    const handleClick = (ev: React.MouseEvent<HTMLCanvasElement>) => {
+        if (drag.current.isDragging) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = ev.clientX - rect.left; // x relative to canvas;
+        const barWidth = rect.width / barCount;
+        const clickedIndex = Math.floor(x / barWidth);
+        setUserMarkers([clickedIndex]);
+
+        if (!audioBuffer) return;
+        // Calculate at which frame we're currently at
+        const channelData = audioBuffer.getChannelData(0);
+        const samplesPerBar = Math.floor(channelData.length / barCount);
+        const marker = clickedIndex * samplesPerBar;
+
+        player.setUserStartMarker(marker);
+    }
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        drag.current.isDragging = false;
+        drag.current.dragStartX = e.clientX;
+    }
+    
+    const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const dx = e.clientX - drag.current.dragStartX;
+        if (Math.abs(dx) > 3) {
+            drag.current.isDragging = true;
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [audioBuffer, userMarkers, player])
+    }
+    
+    const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (!drag.current.isDragging) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const barWidth = rect.width / barCount;
+        const dragEndX = e.clientX;
+        const dragStartX = drag.current.dragStartX;
 
-    return <Canvas canvasRef={canvasRef} className={className} draw={audioBuffer ? drawAudioWaveform : drawCoolSineWave} />;
+        const startXBar = dragStartX - rect.left;
+        const clickedIndex1 = Math.floor(startXBar / barWidth);
+
+        const endXBar = dragEndX - rect.left;
+        const clickedIndex2 = Math.floor(endXBar / barWidth);
+
+        if (!audioBuffer) return;
+        // Calculate at which frame we're currently at
+        const channelData = audioBuffer.getChannelData(0);
+        const samplesPerBar = Math.floor(channelData.length / barCount);
+        const startMarker = clickedIndex1 * samplesPerBar;
+        const endMarker = clickedIndex2 * samplesPerBar;
+
+        player.setUserEndMarker(endMarker > startMarker ? endMarker : startMarker);
+        player.setUserStartMarker(startMarker < endMarker ? startMarker : endMarker);
+        setUserMarkers([clickedIndex1, clickedIndex2 - 1]);
+    }
+
+    return (
+        <Canvas 
+            canvasRef={canvasRef} 
+            className={className} 
+            draw={audioBuffer ? drawAudioWaveform : drawCoolSineWave} 
+            onClick={handleClick}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+        />
+    );
 };
 
 export default AudioWaveform;
-
-
-// const height = (Math.sin(Date.now() * 0.002 + i) * 0.5 + 0.5) * rect.height;
-
-// sin(x) ∈ [−1,1]
-// Multiply by 0.5 -> [-0.5, 0.5]
-// + 0.5 -> [0, 1]
-// we get a smooth map from [-1, 1] to [0, 1];
