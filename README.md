@@ -1,75 +1,28 @@
-# React + TypeScript + Vite
+# Audio Looper Visualizer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web-based audio player and waveform visualizer built with React, Vite, and the Web Audio API. 
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Waveform Visualization:** Render an accurate visual representation of the audio peak data using a responsive canvas integration. 
+- **Dynamic Looping:** Interactively set your start and end looping markers by clicking and dragging directly on the visual waveform! The selected portions will seamlessly trigger internal looper limits when you enable the loop setting.
+- **Playback Controls:** Fully functional Play, Stop, and Resume tools that automatically synchronize out-of-the-box with your visual playhead marker.
+- **Real-time Tuning:** Uptune or Downtune the pitch and playback rate of your audio dynamically on the fly.
 
-## React Compiler
+## Screenshots
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+![Looper Main Screen](docs/images/looper-main.png)
 
-Note: This will impact Vite dev & build performances.
+## Running the application
 
-## Expanding the ESLint configuration
+1. Run `npm install` to install all necessary dependencies.
+2. Run `npm run dev` to start the local development server.
+3. Open your browser and navigate to the provided localhost URL (e.g., `http://localhost:5173`).
+4. Upload an audio file using the provided interface and start looping!
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Built With
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+*   [React](https://react.dev/)
+*   [Vite](https://vitejs.dev/)
+*   [Tailwind CSS](https://tailwindcss.com/)
+*   [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
