@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import type { AudioPlayer } from "../AudioPlayer/AudioPlayer";
 import Canvas from "../Common/Canvas";
 import { secondsToMinutes } from "../Utils/Time";
@@ -41,8 +41,27 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
         }
     };
 
-    const drawAudioWaveform = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
+    const peaks = useMemo(() => {
         if (!audioBuffer) return null;
+        const channelData = audioBuffer.getChannelData(0);
+        const samplesPerBar = Math.floor(channelData.length / barCount);
+        const maxes = new Array(barCount).fill(0);
+        for (let i = 0; i < barCount; i++) {
+            const start = i * samplesPerBar;
+            const end = start + samplesPerBar;
+            let max = 0;
+            // Scan linearly through the bar region
+            for (let j = start; j < end; j += 100) {
+                const val = Math.abs(channelData[j]);
+                if (val > max) max = val;
+            }
+            maxes[i] = max;
+        }
+        return maxes;
+    }, [audioBuffer]);
+
+    const drawAudioWaveform = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
+        if (!audioBuffer || !peaks) return null;
         const rect = canvas.getBoundingClientRect();
         const barWidth = rect.width / barCount;
 
@@ -50,22 +69,19 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
         ctx.fillStyle = "#1e1b4b";
         ctx.fillRect(0, 0, rect.width, rect.height);
 
-        const channelData = audioBuffer.getChannelData(0);
-        const samplesPerBar = Math.floor(channelData.length / barCount);
         const sampleRate = player.getContext().sampleRate;
         const currentOffset = player.currentOffset();
         const currentSample = Math.floor(sampleRate * currentOffset);
         const duration = player.getBufferDurationInSeconds();
+        
+        const channelDataLength = audioBuffer.length;
+        const samplesPerBar = Math.floor(channelDataLength / barCount);
 
         for (let i = 0; i < barCount; i++) {
             const start = i * samplesPerBar;
             const end = start + samplesPerBar;
-            let max = 0;
-            for (let j = start; j < end; j += 100) {
-                const val = Math.abs(channelData[j]);
-                if (val > max) max = val;
-            }
-            const height = max * rect.height;
+            
+            const height = peaks[i] * rect.height;
 
             if (userMarkers.includes(i)) {
                 ctx.fillStyle = "#DE1A58";
