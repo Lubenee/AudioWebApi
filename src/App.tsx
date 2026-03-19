@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { Checkbox } from "./Common/Checkbox";
 import AudioUpload from "./Common/Uploader";
 import { useSnackbar } from "notistack";
+import { removeFileExtension } from "./Utils/File";
 
 export default function App() {
   const { enqueueSnackbar } = useSnackbar();
@@ -13,10 +14,12 @@ export default function App() {
   const playerRef = useRef<AudioPlayer>(new AudioPlayer());
   const [loop, setLoop] = useState(false);
   const [detune, setDetune] = useState(0);
+  const [filename, setFilename] = useState<string>("");
 
   async function loadFile(file: File) {
     const buff = await playerRef.current.loadFile(file);
     setAudioBuffer(buff);
+    setFilename(removeFileExtension(file.name));
     setUserMarkers([]);
   }
   
@@ -80,6 +83,7 @@ export default function App() {
         className="w-full h-[82vh]"
         userMarkers={userMarkers}
         setUserMarkers={setUserMarkers}
+        filename={filename}
       />
 
     </div>

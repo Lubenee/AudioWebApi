@@ -10,9 +10,10 @@ interface Props {
     className?: string;
     userMarkers: number[];
     setUserMarkers: React.Dispatch<React.SetStateAction<number[]>>;
+    filename?: string;
 }
 
-const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, className = '' }: Props) => {
+const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, className = '', filename = '' }: Props) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const { enqueueSnackbar } = useSnackbar();
     const barCount = 500;
@@ -94,10 +95,16 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
             ctx.fillRect(i * barWidth, rect.height - height, barWidth - 2, height);
         }
 
-        ctx.fillStyle = "#FFF"
+        ctx.fillStyle = "#FFF";
         ctx.font = "28px Roboto";
         ctx.fillText(secondsToMinutes(currentOffset), 10, 40);
-        ctx.fillText(secondsToMinutes(duration), 1590, 40);
+        ctx.fillText(secondsToMinutes(duration), rect.width - 100, 40);
+
+        if (filename) {
+            ctx.textAlign = "center";
+            ctx.fillText(filename, rect.width / 2, 40);
+            ctx.textAlign = "left"; // reset for other text calls
+        }
     }
 
     useEffect(() => {
