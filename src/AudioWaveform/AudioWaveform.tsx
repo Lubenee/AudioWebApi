@@ -11,18 +11,29 @@ interface Props {
     userMarkers: number[];
     setUserMarkers: React.Dispatch<React.SetStateAction<number[]>>;
     filename?: string;
+    zoom?: number;
 }
 
-const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, className = '', filename = '' }: Props) => {
+const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, className = '', filename = '', zoom = 1 }: Props) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const { enqueueSnackbar } = useSnackbar();
-    const barCount = 500;
+    const barCount = 500 * zoom;
+    const currentTimeRef = useRef<HTMLSpanElement>(null);
+    const progressBarRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const viewportIndRef = useRef<HTMLDivElement>(null);
     const drag = useRef({
         isDragging: false,
         dragStartX: 0,
     });
 
     const drawCoolSineWave = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, frameCount: number) => {
+        if (currentTimeRef.current) {
+            currentTimeRef.current.innerText = "00:00";
+        }
+        if (progressBarRef.current) {
+            progressBarRef.current.style.width = "0%";
+        }
         const rect = canvas.getBoundingClientRect();
         // clear
         ctx.clearRect(0, 0, rect.width, rect.height);
@@ -44,6 +55,7 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
 
     const peaks = useMemo(() => {
         if (!audioBuffer) return null;
+        console.log('here')
         const channelData = audioBuffer.getChannelData(0);
         const samplesPerBar = Math.floor(channelData.length / barCount);
         const maxes = new Array(barCount).fill(0);
@@ -59,7 +71,7 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
             maxes[i] = max;
         }
         return maxes;
-    }, [audioBuffer]);
+    }, [audioBuffer, zoom]);
 
     const drawAudioWaveform = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
         if (!audioBuffer || !peaks) return null;
@@ -73,7 +85,6 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
         const sampleRate = player.getContext().sampleRate;
         const currentOffset = player.currentOffset();
         const currentSample = Math.floor(sampleRate * currentOffset);
-        const duration = player.getBufferDurationInSeconds();
         
         const channelDataLength = audioBuffer.length;
         const samplesPerBar = Math.floor(channelDataLength / barCount);
@@ -95,17 +106,34 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
             ctx.fillRect(i * barWidth, rect.height - height, barWidth - 2, height);
         }
 
-        ctx.fillStyle = "#FFF";
-        ctx.font = "28px Roboto";
-        ctx.fillText(secondsToMinutes(currentOffset), 10, 40);
-        ctx.fillText(secondsToMinutes(duration), rect.width - 100, 40);
-
-        if (filename) {
-            ctx.textAlign = "center";
-            ctx.fillText(filename, rect.width / 2, 40);
-            ctx.textAlign = "left"; // reset for other text calls
+        if (currentTimeRef.current) {
+            currentTimeRef.current.innerText = secondsToMinutes(currentOffset);
+        }
+        if (progressBarRef.current) {
+            const duration = player.getBufferDurationInSeconds();
+            if (duration > 0) {
+                progressBarRef.current.style.width = `${(currentOffset / duration) * 100}%`;
+            }
         }
     }
+
+    const handleScroll = () => {
+        if (!scrollContainerRef.current || !viewportIndRef.current) return;
+        const { scrollLeft, scrollWidth } = scrollContainerRef.current;
+        if (scrollWidth === 0) return;
+        // The thumb width represents the viewport scale: 1 / zoom.
+        // It starts at left: 0% and ends at left: (1 - 1/zoom) * 100%.
+        // The scrollLeft is proportional to the total overflow.
+        const thumbLeftPercent = (scrollLeft / scrollWidth) * 100;
+        viewportIndRef.current.style.left = `${thumbLeftPercent}%`;
+    };
+
+    useEffect(() => {
+        if (viewportIndRef.current) {
+            viewportIndRef.current.style.width = `${(1 / Math.max(1, zoom)) * 100}%`;
+            handleScroll();
+        }
+    }, [zoom]);
 
     useEffect(() => {
         const handleKeyUp = (ev: KeyboardEvent) => {
@@ -188,15 +216,47 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
     }
 
     return (
-        <Canvas 
-            canvasRef={canvasRef} 
-            className={className} 
-            draw={audioBuffer ? drawAudioWaveform : drawCoolSineWave} 
-            onClick={handleClick}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-        />
+        <div className={`flex flex-col bg-[#110e2d] rounded-lg overflow-hidden border-2 border-indigo-900 shadow-xl ${className}`}>
+            <div className="flex flex-col bg-[#1e1b4b] border-b border-indigo-800 z-10 shadow-[0_4px_15px_rgba(0,0,0,0.5)]">
+                <div className="flex justify-between items-center px-6 py-3">
+                    <div className="font-bold text-fuchsia-400 tracking-wider text-lg">
+                        {filename ? filename.toUpperCase() : 'NO TRACK LOADED'}
+                    </div>
+                    <div className="flex gap-2 font-mono text-lg text-teal-400 items-center">
+                       <span ref={currentTimeRef} className="w-16 text-right">00:00</span>
+                       <span className="text-indigo-400 text-sm">/</span>
+                       <span className="w-16">{audioBuffer ? secondsToMinutes(player.getBufferDurationInSeconds()) : '00:00'}</span>
+                    </div>
+                </div>
+                <div className="w-full h-1.5 bg-[#110e2d]">
+                    <div ref={progressBarRef} className="h-full bg-gradient-to-r from-teal-400 to-emerald-400" style={{ width: '0%' }}></div>
+                </div>
+
+                <div className="w-full h-1 bg-[#0a0816] relative overflow-visible z-20">
+                    <div 
+                        ref={viewportIndRef} 
+                        className="absolute top-0 h-full bg-fuchsia-400 shadow-[0_0_10px_2px_rgba(232,121,249,0.7)] rounded-full transition-[width] duration-300 pointer-events-none"
+                        style={{ width: '100%', left: '0%' }}
+                    ></div>
+                </div>
+            </div>
+            <div 
+                ref={scrollContainerRef}
+                className="flex-1 overflow-x-auto overflow-y-hidden bg-[#1e1b4b]"
+                onScroll={handleScroll}
+            >
+                <Canvas 
+                    canvasRef={canvasRef} 
+                    className="h-full block min-w-full origin-left"
+                    style={{ width: `${zoom * 100}%` }}
+                    draw={audioBuffer ? drawAudioWaveform : drawCoolSineWave} 
+                    onClick={handleClick}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                />
+            </div>
+        </div>
     );
 };
 

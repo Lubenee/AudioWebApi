@@ -23,7 +23,8 @@ const useCanvas = ({ draw, canvasRef }: Props) => {
             canvas.height = rect.height * dpr;
             context.scale(dpr, dpr);
         };
-        window.addEventListener("resize", resizeCanvas);
+        const resizeObserver = new ResizeObserver(resizeCanvas);
+        resizeObserver.observe(canvas);
         resizeCanvas();
 
         const render = () => {
@@ -37,7 +38,7 @@ const useCanvas = ({ draw, canvasRef }: Props) => {
 
         return () => {
             window.cancelAnimationFrame(animationFrameId);
-            window.removeEventListener("resize", resizeCanvas);
+            resizeObserver.disconnect();
         };
     }, [draw, canvasRef]);
 

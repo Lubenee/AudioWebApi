@@ -15,6 +15,7 @@ export default function App() {
   const [loop, setLoop] = useState(false);
   const [detune, setDetune] = useState(0);
   const [filename, setFilename] = useState<string>("");
+  const [zoom, setZoom] = useState(1);
 
   async function loadFile(file: File) {
     const buff = await playerRef.current.loadFile(file);
@@ -56,17 +57,6 @@ export default function App() {
           <PrimaryButton onClick={playFile}>Play</PrimaryButton>
           <PrimaryButton onClick={() => playerRef.current.stop()}>Stop</PrimaryButton>
           <PrimaryButton onClick={() => playerRef.current.resume()}>Resume</PrimaryButton>
-          <PrimaryButton onClick={() => {
-            const newDetune = detune - 1;
-            setDetune(newDetune);
-            playerRef.current.setDetuneSemitones(newDetune);
-          }}>Downtune</PrimaryButton>
-          <PrimaryButton onClick={() => {
-            const newDetune = detune + 1;
-            setDetune(newDetune);
-            playerRef.current.setDetuneSemitones(newDetune);
-          }}>Uptune</PrimaryButton>
-          <PrimaryButton onClick={resetMarkers}>Reset Markers</PrimaryButton>
         </div>
 
         <div>
@@ -80,11 +70,33 @@ export default function App() {
       <AudioWaveform
         player={playerRef.current}
         audioBuffer={audioBuffer}
-        className="w-full h-[82vh]"
+        className="w-full h-[65vh]"
         userMarkers={userMarkers}
         setUserMarkers={setUserMarkers}
         filename={filename}
+        zoom={zoom}
       />
+
+      {
+        filename &&
+        <div className="flex flex-row justify-center items-center p-2 gap-4 h-24 bg-teal-700 shadow-teal-800 shadow-[4px_4px_0_0_#4c1d95]">
+          <div className="flex flex-row items-center gap-3">
+            <PrimaryButton onClick={() => {
+              const newDetune = detune - 1;
+              setDetune(newDetune);
+              playerRef.current.setDetuneSemitones(newDetune);
+            }}>Downtune</PrimaryButton>
+            <PrimaryButton onClick={() => {
+              const newDetune = detune + 1;
+              setDetune(newDetune);
+              playerRef.current.setDetuneSemitones(newDetune);
+            }}>Uptune</PrimaryButton>
+            <PrimaryButton onClick={() => setZoom(z => Math.max(1, z - .5))}>Zoom Out</PrimaryButton>
+            <PrimaryButton onClick={() => setZoom(z => Math.min(20, z + .5))}>Zoom In</PrimaryButton>
+            <PrimaryButton onClick={resetMarkers}>Reset</PrimaryButton>
+          </div>
+        </div>
+      }
 
     </div>
   );
