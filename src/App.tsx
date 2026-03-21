@@ -6,12 +6,18 @@ import { Checkbox } from "./Common/Checkbox";
 import AudioUpload from "./Common/Uploader";
 import { useSnackbar } from "notistack";
 import { removeFileExtension } from "./Utils/File";
-
+import ChordDisplay, { type Chord } from "./ChordDisplay/ChordDisplay";
+import EffectsPanel from "./EffectsPanel/EffectsPanel";
 export default function App() {
   const { enqueueSnackbar } = useSnackbar();
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>();
   const [userMarkers, setUserMarkers] = useState<number[]>([]);
   const playerRef = useRef<AudioPlayer>(new AudioPlayer());
+  const [chords, setChords] = useState<Chord[] | null>(null);
+  const [isAnalyzingChords, setIsAnalyzingChords] = useState(false);
+  const [showChords, setShowChords] = useState(true);
+  const [showEffects, setShowEffects] = useState(false);
+  const workerRef = useRef<Worker | null>(null);
   const [loop, setLoop] = useState(false);
   const [detune, setDetune] = useState(0);
   const [filename, setFilename] = useState<string>("");
@@ -22,6 +28,24 @@ export default function App() {
     setAudioBuffer(buff);
     setFilename(removeFileExtension(file.name));
     setUserMarkers([]);
+
+    setChords(null);
+    setIsAnalyzingChords(true);
+    if (!workerRef.current) {
+        workerRef.current = new Worker(new URL('./Utils/ChordWorker.ts', import.meta.url), { type: 'module' });
+    }
+    workerRef.current.onmessage = (e) => {
+        setIsAnalyzingChords(false);
+        if (e.data.success) {
+            setChords(e.data.chords);
+        } else {
+            console.error("Chord analysis failed", e.data.error);
+        }
+    };
+    workerRef.current.postMessage({
+        channelData: buff.getChannelData(0),
+        sampleRate: buff.sampleRate
+    });
   }
   
   function playFile() {
@@ -59,11 +83,13 @@ export default function App() {
           <PrimaryButton onClick={() => playerRef.current.resume()}>Resume</PrimaryButton>
         </div>
 
-        <div>
+        <div className="flex flex-row items-center gap-6 bg-amber-900/30 px-5 py-3 rounded-xl border-2 border-amber-900/50 shadow-inner">
           <Checkbox label="Enable loop" checked={loop} onChange={(checked) => {
             playerRef.current.setLoop(checked);
             setLoop(checked);
           }} />
+          <Checkbox label="Show chords" checked={showChords} onChange={setShowChords} />
+          <Checkbox label="Show effects" checked={showEffects} onChange={setShowEffects} />
         </div>
       </div>
 
@@ -76,6 +102,17 @@ export default function App() {
         filename={filename}
         zoom={zoom}
       />
+
+      {showChords && isAnalyzingChords && (
+        <div className="flex justify-center items-center py-4 bg-indigo-950 rounded-lg border-2 border-indigo-700 text-teal-400 font-bold tracking-widest animate-pulse h-48">
+          ANALYZING CHORDS...
+        </div>
+      )}
+
+      {showChords && chords && <ChordDisplay player={playerRef.current!} chords={chords} />}
+
+      {showEffects && <EffectsPanel player={playerRef.current!} />}
+
 
       {
         filename &&
