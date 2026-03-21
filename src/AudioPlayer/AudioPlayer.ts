@@ -3,6 +3,33 @@ export class AudioPlayer {
   private buffer?: AudioBuffer;
   private source?: AudioBufferSourceNode;
 
+  private gainNode = this.audioCtx.createGain();
+  private pannerNode = this.audioCtx.createStereoPanner();
+  private compressorNode = this.audioCtx.createDynamicsCompressor();
+  
+  private lowEqNode = this.audioCtx.createBiquadFilter();
+  private midEqNode = this.audioCtx.createBiquadFilter();
+  private highEqNode = this.audioCtx.createBiquadFilter();
+
+  constructor() {
+    this.lowEqNode.type = 'lowshelf';
+    this.lowEqNode.frequency.value = 320;
+
+    this.midEqNode.type = 'peaking';
+    this.midEqNode.frequency.value = 1000;
+    this.midEqNode.Q.value = 0.5;
+
+    this.highEqNode.type = 'highshelf';
+    this.highEqNode.frequency.value = 3200;
+
+    this.lowEqNode.connect(this.midEqNode);
+    this.midEqNode.connect(this.highEqNode);
+    this.highEqNode.connect(this.compressorNode);
+    this.compressorNode.connect(this.pannerNode);
+    this.pannerNode.connect(this.gainNode);
+    this.gainNode.connect(this.audioCtx.destination);
+  }
+
   private startTime: number = 0;
   private playbackOffset: number = 0;
   private paused = true;
@@ -23,7 +50,7 @@ export class AudioPlayer {
     src.loopEnd = this.endUserMarker || this.buffer.duration;
     src.detune.value = this.detune;
 
-    src.connect(this.audioCtx.destination);
+    src.connect(this.lowEqNode);
     src.start(this.audioCtx.currentTime, offset);
 
     this.source = src;
@@ -133,5 +160,28 @@ export class AudioPlayer {
     if (this.source) {
       this.source.detune.value = this.detune;
     }
-  } 
+  }
+
+  setVolume(value: number) { this.gainNode.gain.value = value; }
+  getVolume() { return this.gainNode.gain.value; }
+
+  setPan(value: number) { this.pannerNode.pan.value = value; }
+  getPan() { return this.pannerNode.pan.value; }
+
+  setCompressor(threshold: number, ratio: number) {
+    this.compressorNode.threshold.value = threshold;
+    this.compressorNode.ratio.value = ratio;
+  }
+  getCompressor() { 
+    return { threshold: this.compressorNode.threshold.value, ratio: this.compressorNode.ratio.value }; 
+  }
+
+  setEq(low: number, mid: number, high: number) {
+    this.lowEqNode.gain.value = low;
+    this.midEqNode.gain.value = mid;
+    this.highEqNode.gain.value = high;
+  }
+  getEq() {
+    return { low: this.lowEqNode.gain.value, mid: this.midEqNode.gain.value, high: this.highEqNode.gain.value };
+  }
 }
