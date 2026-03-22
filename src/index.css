@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+@theme {
+  --color-looper-bg: #110e2d;
+  --color-looper-bg-elevated: #1e1b4b;
+  --color-looper-bg-dark: #0a0816;
+  --color-looper-primary: #9810fa;
+  --color-looper-primary-shadow: #4c1d95;
+  --color-looper-accent-played: #51d6ca;
+  --color-looper-accent-unplayed: #FFA000;
+  --color-looper-accent-marker: #DE1A58;
+
+  --shadow-retro: 4px 4px 0 0 var(--color-looper-primary-shadow);
+  --shadow-retro-sm: 3px 3px 0 0 var(--color-looper-primary-shadow);
+  --shadow-panel: 0 8px 30px rgba(0,0,0,0.5);
+}

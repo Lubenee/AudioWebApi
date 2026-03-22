@@ -72,7 +72,7 @@ export default function App() {
 
   return (
     <div className="bg-indigo-900 p-4 space-y-4 text-fuchsia-400">
-      <div className="flex flex-row justify-between items-center p-2 gap-4 h-24 bg-amber-700 shadow-amber-800 shadow-[4px_4px_0_0_#4c1d95]">
+      <div className="flex flex-row justify-between items-center p-2 gap-4 h-24 bg-amber-700 shadow-amber-800 shadow-retro">
         <div>
           <AudioUpload onChange={handleFileChange} />
         </div>
@@ -116,7 +116,7 @@ export default function App() {
 
       {
         filename &&
-        <div className="flex flex-row justify-center items-center p-2 gap-4 h-24 bg-teal-700 shadow-teal-800 shadow-[4px_4px_0_0_#4c1d95]">
+        <div className="flex flex-row justify-center items-center p-2 gap-4 h-24 bg-teal-700 shadow-teal-800 shadow-retro">
           <div className="flex flex-row items-center gap-3">
             <PrimaryButton onClick={() => {
               const newDetune = detune - 1;

@@ -39,16 +39,18 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
         ctx.clearRect(0, 0, rect.width, rect.height);
 
         // background
-        ctx.fillStyle = "#1e1b4b";
+        const style = getComputedStyle(document.documentElement);
+        ctx.fillStyle = style.getPropertyValue('--color-looper-bg-elevated').trim();
         ctx.fillRect(0, 0, rect.width, rect.height);
 
         // waveform
         const barWidth = rect.width / barCount;
 
         const t = frameCount * 0.00011;
+        const primaryColor = style.getPropertyValue('--color-looper-primary').trim();
         for (let i = 0; i < barCount; i++) {
             const height = rect.height * (Math.abs(Math.sin(i * t)));
-            ctx.fillStyle = "#9810fa";
+            ctx.fillStyle = primaryColor;
             ctx.fillRect(i * barWidth, rect.height - height, barWidth - 2, height);
         }
     };
@@ -78,8 +80,9 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
         const rect = canvas.getBoundingClientRect();
         const barWidth = rect.width / barCount;
 
+        const style = getComputedStyle(document.documentElement);
         ctx.clearRect(0, 0, rect.width, rect.height);
-        ctx.fillStyle = "#1e1b4b";
+        ctx.fillStyle = style.getPropertyValue('--color-looper-bg-elevated').trim();
         ctx.fillRect(0, 0, rect.width, rect.height);
 
         const sampleRate = player.getContext().sampleRate;
@@ -95,12 +98,16 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
             
             const height = peaks[i] * rect.height;
 
+            const markerColor = style.getPropertyValue('--color-looper-accent-marker').trim();
+            const playedColor = style.getPropertyValue('--color-looper-accent-played').trim();
+            const unplayedColor = style.getPropertyValue('--color-looper-accent-unplayed').trim();
+
             if (userMarkers.includes(i)) {
-                ctx.fillStyle = "#DE1A58";
+                ctx.fillStyle = markerColor;
             } else if (end > currentSample) {
-                ctx.fillStyle = "#51d6ca";
+                ctx.fillStyle = playedColor;
             } else {
-                ctx.fillStyle = "#FFA000";
+                ctx.fillStyle = unplayedColor;
             }
 
             ctx.fillRect(i * barWidth, rect.height - height, barWidth - 2, height);
@@ -216,8 +223,8 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
     }
 
     return (
-        <div className={`flex flex-col bg-[#110e2d] rounded-lg overflow-hidden border-2 border-indigo-900 shadow-xl ${className}`}>
-            <div className="flex flex-col bg-[#1e1b4b] border-b border-indigo-800 z-10 shadow-[0_4px_15px_rgba(0,0,0,0.5)]">
+        <div className={`flex flex-col bg-looper-bg rounded-lg overflow-hidden border-2 border-indigo-900 shadow-xl ${className}`}>
+            <div className="flex flex-col bg-looper-bg-elevated border-b border-indigo-800 z-10 shadow-[0_4px_15px_rgba(0,0,0,0.5)]">
                 <div className="flex justify-between items-center px-6 py-3">
                     <div className="font-bold text-fuchsia-400 tracking-wider text-lg">
                         {filename ? filename.toUpperCase() : 'NO TRACK LOADED'}
@@ -228,11 +235,11 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
                        <span className="w-16">{audioBuffer ? secondsToMinutes(player.getBufferDurationInSeconds()) : '00:00'}</span>
                     </div>
                 </div>
-                <div className="w-full h-1.5 bg-[#110e2d]">
+                <div className="w-full h-1.5 bg-looper-bg">
                     <div ref={progressBarRef} className="h-full bg-gradient-to-r from-teal-400 to-emerald-400" style={{ width: '0%' }}></div>
                 </div>
 
-                <div className="w-full h-1 bg-[#0a0816] relative overflow-visible z-20">
+                <div className="w-full h-1 bg-looper-bg-dark relative overflow-visible z-20">
                     <div 
                         ref={viewportIndRef} 
                         className="absolute top-0 h-full bg-fuchsia-400 shadow-[0_0_10px_2px_rgba(232,121,249,0.7)] rounded-full transition-[width] duration-300 pointer-events-none"
@@ -242,7 +249,7 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
             </div>
             <div 
                 ref={scrollContainerRef}
-                className="flex-1 overflow-x-auto overflow-y-hidden bg-[#1e1b4b]"
+                className="flex-1 overflow-x-auto overflow-y-hidden bg-looper-bg-elevated"
                 onScroll={handleScroll}
             >
                 <Canvas 

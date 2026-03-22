@@ -35,7 +35,7 @@ export function Checkbox({
           relative h-6 w-6
           border-4 border-purple-900
           bg-purple-200
-          shadow-[3px_3px_0_0_#4c1d95]
+          shadow-retro-sm
           transition-all
           ${isChecked ? "bg-purple-600 shadow-none translate-x-px translate-y-px" : ""}
         `}

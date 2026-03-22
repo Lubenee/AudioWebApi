@@ -24,7 +24,7 @@ export default function AudioUpload({ onChange }: RetroAudioUploadProps) {
                     text-purple-100
                     font-mono tracking-wide
                     border-4 border-purple-900
-                    shadow-[4px_4px_0_0_#4c1d95]
+                    shadow-retro
                     transition-all
                     hover:bg-purple-500
                     active:translate-x-0.5
