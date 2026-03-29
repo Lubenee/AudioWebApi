@@ -1,7 +1,7 @@
 import { AudioPlayer } from "./AudioPlayer/AudioPlayer";
 import PrimaryButton from "./Common/PrimaryButton";
 import AudioWaveform from "./AudioWaveform/AudioWaveform";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Checkbox } from "./Common/Checkbox";
 import AudioUpload from "./Common/Uploader";
 import { useSnackbar } from "notistack";
@@ -19,6 +19,7 @@ export default function App() {
   const workerRef = useRef<Worker | null>(null);
   const [loop, setLoop] = useState(false);
   const [detune, setDetune] = useState(0);
+  const [speed, setSpeed] = useState(1);
   const [filename, setFilename] = useState<string>("");
   const [zoom, setZoom] = useState(1);
 
@@ -66,6 +67,33 @@ export default function App() {
     playerRef.current.setUserEndMarker(0);
   }
 
+  useEffect(() => {
+    const handleKeyDown = (ev: KeyboardEvent) => {
+        if (ev.code === 'Space' && !(ev.target instanceof HTMLInputElement)) {
+            ev.preventDefault();
+        }
+    };
+    const handleKeyUp = (ev: KeyboardEvent) => {
+        if (ev.target instanceof HTMLInputElement) return;
+        switch (ev.code) {
+            case 'Space':
+                ev.preventDefault();
+                if (playerRef.current.isPaused()) playerRef.current.resume();
+                else playerRef.current.stop();
+                break;
+            case 'KeyL': setLoop(p => { playerRef.current.setLoop(!p); return !p; }); break;
+            case 'KeyE': setShowEffects(p => !p); break;
+            case 'KeyC': setShowChords(p => !p); break;
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
   return (
     <div className="bg-indigo-900 p-4 space-y-4 text-fuchsia-400">
       <div className="flex flex-row justify-between items-center p-2 gap-4 h-24 bg-amber-700 shadow-amber-800 shadow-retro">
@@ -85,7 +113,7 @@ export default function App() {
             setLoop(checked);
           }} />
           <Checkbox label="Show chords" checked={showChords} onChange={setShowChords} />
-          <Checkbox label="Show effects" checked={showEffects} onChange={setShowEffects} />
+          <Checkbox label="Show rack" checked={showEffects} onChange={setShowEffects} />
         </div>
       </div>
 
@@ -111,20 +139,60 @@ export default function App() {
       {
         filename &&
         <div className="flex flex-row justify-center items-center p-2 gap-4 h-24 bg-teal-700 shadow-teal-800 shadow-retro">
-          <div className="flex flex-row items-center gap-3">
-            <PrimaryButton onClick={() => {
-              const newDetune = detune - 1;
-              setDetune(newDetune);
-              playerRef.current.setDetuneSemitones(newDetune);
-            }}>Downtune</PrimaryButton>
-            <PrimaryButton onClick={() => {
-              const newDetune = detune + 1;
-              setDetune(newDetune);
-              playerRef.current.setDetuneSemitones(newDetune);
-            }}>Uptune</PrimaryButton>
-            <PrimaryButton onClick={() => setZoom(z => Math.max(1, z - .5))}>Zoom Out</PrimaryButton>
-            <PrimaryButton onClick={() => setZoom(z => Math.min(20, z + .5))}>Zoom In</PrimaryButton>
-            <PrimaryButton onClick={resetMarkers}>Reset</PrimaryButton>
+          <div className="flex flex-row items-center gap-8 w-full justify-center">
+            <div className="flex items-center gap-3">
+              <PrimaryButton className="w-20 text-xs" onClick={() => {
+                const newDetune = detune - 1;
+                setDetune(newDetune);
+                playerRef.current.setDetuneSemitones(newDetune);
+              }}>- Pitch</PrimaryButton>
+              <span className="font-mono text-teal-100 font-bold w-6 text-center">{detune > 0 ? `+${detune}` : detune}</span>
+              <PrimaryButton className="w-20 text-xs" onClick={() => {
+                const newDetune = detune + 1;
+                setDetune(newDetune);
+                playerRef.current.setDetuneSemitones(newDetune);
+              }}>+ Pitch</PrimaryButton>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <PrimaryButton className="w-20 text-xs" onClick={() => {
+                const newSpeed = Math.max(0.2, speed - 0.01);
+                setSpeed(newSpeed);
+                playerRef.current.setPlaybackRate(newSpeed);
+              }}>- Speed</PrimaryButton>
+              
+              <div className="flex flex-col items-center justify-center gap-2 w-24">
+                <span className="font-mono text-teal-100 font-bold text-center text-sm">{Math.round(speed * 100)}%</span>
+                <input 
+                  type="range" 
+                  min={0.2} 
+                  max={2.0} 
+                  step={0.01} 
+                  value={speed} 
+                  onChange={(e) => {
+                    const newSpeed = parseFloat(e.target.value);
+                    setSpeed(newSpeed);
+                    playerRef.current.setPlaybackRate(newSpeed);
+                  }} 
+                  className="w-full h-1.5 bg-indigo-900 rounded-lg appearance-none cursor-pointer accent-fuchsia-400" 
+                />
+              </div>
+
+              <PrimaryButton className="w-20 text-xs" onClick={() => {
+                const newSpeed = Math.min(2.0, speed + 0.01);
+                setSpeed(newSpeed);
+                playerRef.current.setPlaybackRate(newSpeed);
+              }}>+ Speed</PrimaryButton>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <PrimaryButton className="w-20 text-xs" onClick={() => setZoom(z => Math.max(1, z - .5))}>- Zoom</PrimaryButton>
+              <span className="font-mono text-teal-100 font-bold w-8 text-center">{zoom}x</span>
+              <PrimaryButton className="w-20 text-xs" onClick={() => setZoom(z => Math.min(20, z + .5))}>+ Zoom</PrimaryButton>
+            </div>
+
+            <div className="w-4"></div>
+            <PrimaryButton className="w-28 text-xs" onClick={resetMarkers}>Reset Loop</PrimaryButton>
           </div>
         </div>
       }

@@ -38,6 +38,7 @@ export class AudioPlayer {
   private paused = true;
   private loop = false;
   private detune = 0;
+  private playbackRate = 1.0;
 
   private startUserMarker: number = 0;
   private endUserMarker: number = 0;
@@ -52,6 +53,7 @@ export class AudioPlayer {
     src.loopStart = this.startUserMarker;
     src.loopEnd = this.endUserMarker || this.buffer.duration;
     src.detune.value = this.detune;
+    src.playbackRate.value = this.playbackRate;
 
     src.connect(this.eqNodes[0]);
     src.start(this.audioCtx.currentTime, offset);
@@ -69,7 +71,7 @@ export class AudioPlayer {
 
     const now = this.audioCtx.currentTime;
     const realElapsed = now - this.startTime;
-    const rate = Math.pow(2, this.detune / 1200);
+    const rate = Math.pow(2, this.detune / 1200) * this.playbackRate;
     const audioElapsed = realElapsed * rate;
 
     const loopStart = this.source.loopStart;
@@ -167,6 +169,18 @@ export class AudioPlayer {
       this.source.detune.value = this.detune;
     }
   }
+
+  setPlaybackRate(rate: number) {
+    if (!this.paused && this.source) {
+      this.playbackOffset = this.currentOffset();
+      this.startTime = this.audioCtx.currentTime;
+    }
+    this.playbackRate = rate;
+    if (this.source) {
+      this.source.playbackRate.value = rate;
+    }
+  }
+  getPlaybackRate() { return this.playbackRate; }
 
   setVolume(value: number) { this.gainNode.gain.value = value; }
   getVolume() { return this.gainNode.gain.value; }

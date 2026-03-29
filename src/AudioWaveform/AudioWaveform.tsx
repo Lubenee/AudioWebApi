@@ -2,7 +2,6 @@ import { useEffect, useRef, useMemo } from "react";
 import type { AudioPlayer } from "../AudioPlayer/AudioPlayer";
 import Canvas from "../Common/Canvas";
 import { secondsToMinutes } from "../Utils/Time";
-import { useSnackbar } from "notistack";
 
 interface Props {
     player: AudioPlayer,
@@ -14,7 +13,6 @@ interface Props {
 
 const AudioWaveform = ({ player, audioBuffer, className = '', filename = '', zoom = 1 }: Props) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const { enqueueSnackbar } = useSnackbar();
     const barCount = 500 * zoom;
     const currentTimeRef = useRef<HTMLSpanElement>(null);
     const progressBarRef = useRef<HTMLDivElement>(null);
@@ -148,25 +146,7 @@ const AudioWaveform = ({ player, audioBuffer, className = '', filename = '', zoo
         }
     }, [zoom]);
 
-    useEffect(() => {
-        const handleKeyUp = (ev: KeyboardEvent) => {
-            if (ev.code === 'Space') {
-                try {
-                    if (!player.isPaused()) {
-                        player.stop();
-                    } else {
-                        player.resume();
-                    }
-                }
-                catch {
-                    enqueueSnackbar("error");
-                }
-            }
-        };
-        
-        window.addEventListener('keyup', handleKeyUp);
-        return () => window.removeEventListener('keyup', handleKeyUp);
-    }, [player, enqueueSnackbar])
+
 
     const handleClick = (ev: React.MouseEvent<HTMLCanvasElement>) => {
         if (drag.current.isDragging) return;
