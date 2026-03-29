@@ -14,16 +14,8 @@ createRoot(document.getElementById("root")!).render(
     </SnackbarProvider>
   </StrictMode>
 );
-
-//! TODO:
+//! BUGS
 /**
- * Fix Visualizer on uptuning/downtuning. 
- * 
- * Speed up / speed down
- * Song time on canvas hover
- * Mute / Unmute
- * Volume, Panner knobs
- * compression, distortion, EQ
- * use AI to remove certain instruments?
- * 
+ * User markers messing up when zooming in/out
+ * Second user marker doesnt reset when just clicking on the canvas
  */

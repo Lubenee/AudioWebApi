@@ -7,24 +7,27 @@ export class AudioPlayer {
   private pannerNode = this.audioCtx.createStereoPanner();
   private compressorNode = this.audioCtx.createDynamicsCompressor();
   
-  private lowEqNode = this.audioCtx.createBiquadFilter();
-  private midEqNode = this.audioCtx.createBiquadFilter();
-  private highEqNode = this.audioCtx.createBiquadFilter();
+  private eqNodes: BiquadFilterNode[] = [];
 
   constructor() {
-    this.lowEqNode.type = 'lowshelf';
-    this.lowEqNode.frequency.value = 320;
+    const frequencies = [63, 160, 400, 1000, 2500, 6250, 16000];
+    
+    for (let i = 0; i < 7; i++) {
+        const node = this.audioCtx.createBiquadFilter();
+        if (i === 0) node.type = 'lowshelf';
+        else if (i === 6) node.type = 'highshelf';
+        else node.type = 'peaking';
+        
+        node.frequency.value = frequencies[i];
+        if (node.type === 'peaking') node.Q.value = 1.0;
+        this.eqNodes.push(node);
+    }
+    
+    for (let i = 0; i < 6; i++) {
+        this.eqNodes[i].connect(this.eqNodes[i + 1]);
+    }
 
-    this.midEqNode.type = 'peaking';
-    this.midEqNode.frequency.value = 1000;
-    this.midEqNode.Q.value = 0.5;
-
-    this.highEqNode.type = 'highshelf';
-    this.highEqNode.frequency.value = 3200;
-
-    this.lowEqNode.connect(this.midEqNode);
-    this.midEqNode.connect(this.highEqNode);
-    this.highEqNode.connect(this.compressorNode);
+    this.eqNodes[6].connect(this.compressorNode);
     this.compressorNode.connect(this.pannerNode);
     this.pannerNode.connect(this.gainNode);
     this.gainNode.connect(this.audioCtx.destination);
@@ -50,7 +53,7 @@ export class AudioPlayer {
     src.loopEnd = this.endUserMarker || this.buffer.duration;
     src.detune.value = this.detune;
 
-    src.connect(this.lowEqNode);
+    src.connect(this.eqNodes[0]);
     src.start(this.audioCtx.currentTime, offset);
 
     this.source = src;
@@ -124,6 +127,9 @@ export class AudioPlayer {
     }
   }
 
+  getUserStartMarker(): number { return this.startUserMarker; }
+  getUserEndMarker(): number { return this.endUserMarker; }
+
   async loadFile(file: File): Promise<AudioBuffer> {
     this.stop(); 
     this.playbackOffset = 0; 
@@ -176,12 +182,14 @@ export class AudioPlayer {
     return { threshold: this.compressorNode.threshold.value, ratio: this.compressorNode.ratio.value }; 
   }
 
-  setEq(low: number, mid: number, high: number) {
-    this.lowEqNode.gain.value = low;
-    this.midEqNode.gain.value = mid;
-    this.highEqNode.gain.value = high;
+  setEq(gains: number[]) {
+    for (let i = 0; i < 7; i++) {
+      if (this.eqNodes[i] && gains[i] !== undefined) {
+        this.eqNodes[i].gain.value = gains[i];
+      }
+    }
   }
-  getEq() {
-    return { low: this.lowEqNode.gain.value, mid: this.midEqNode.gain.value, high: this.highEqNode.gain.value };
+  getEq(): number[] {
+    return this.eqNodes.map(node => node.gain.value);
   }
 }

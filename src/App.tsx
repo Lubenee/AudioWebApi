@@ -11,7 +11,6 @@ import EffectsPanel from "./EffectsPanel/EffectsPanel";
 export default function App() {
   const { enqueueSnackbar } = useSnackbar();
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>();
-  const [userMarkers, setUserMarkers] = useState<number[]>([]);
   const playerRef = useRef<AudioPlayer>(new AudioPlayer());
   const [chords, setChords] = useState<Chord[] | null>(null);
   const [isAnalyzingChords, setIsAnalyzingChords] = useState(false);
@@ -27,7 +26,6 @@ export default function App() {
     const buff = await playerRef.current.loadFile(file);
     setAudioBuffer(buff);
     setFilename(removeFileExtension(file.name));
-    setUserMarkers([]);
 
     setChords(null);
     setIsAnalyzingChords(true);
@@ -65,9 +63,7 @@ export default function App() {
 
   const resetMarkers = () => {
     playerRef.current.setUserStartMarker(0);
-    if (userMarkers.length) {
-      setUserMarkers([]);
-    }
+    playerRef.current.setUserEndMarker(0);
   }
 
   return (
@@ -97,8 +93,6 @@ export default function App() {
         player={playerRef.current}
         audioBuffer={audioBuffer}
         className="w-full h-[65vh]"
-        userMarkers={userMarkers}
-        setUserMarkers={setUserMarkers}
         filename={filename}
         zoom={zoom}
       />

@@ -3,13 +3,14 @@ import type { ReactNode } from "react";
 interface ButtonProps {
   onClick: () => void;
   children: ReactNode;
+  className?: string;
 }
 
-export default function PrimaryButton({ onClick, children }: ButtonProps) {
+export default function PrimaryButton({ onClick, children, className = "" }: ButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="
+      className={`
         w-32 h-20
         bg-purple-600
         text-purple-100
@@ -24,7 +25,8 @@ export default function PrimaryButton({ onClick, children }: ButtonProps) {
         active:shadow-none
         cursor-pointer
         select-none
-      "
+        ${className}
+      `}
     >
       {children}
     </button>

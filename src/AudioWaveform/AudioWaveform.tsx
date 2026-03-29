@@ -8,13 +8,11 @@ interface Props {
     player: AudioPlayer,
     audioBuffer: AudioBuffer | undefined,
     className?: string;
-    userMarkers: number[];
-    setUserMarkers: React.Dispatch<React.SetStateAction<number[]>>;
     filename?: string;
     zoom?: number;
 }
 
-const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, className = '', filename = '', zoom = 1 }: Props) => {
+const AudioWaveform = ({ player, audioBuffer, className = '', filename = '', zoom = 1 }: Props) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const { enqueueSnackbar } = useSnackbar();
     const barCount = 500 * zoom;
@@ -91,6 +89,10 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
         
         const channelDataLength = audioBuffer.length;
         const samplesPerBar = Math.floor(channelDataLength / barCount);
+        
+        const startMarkerSample = Math.floor(player.getUserStartMarker() * sampleRate);
+        let endMarkerSample = Math.floor(player.getUserEndMarker() * sampleRate);
+        if (endMarkerSample === 0) endMarkerSample = startMarkerSample;
 
         for (let i = 0; i < barCount; i++) {
             const start = i * samplesPerBar;
@@ -102,7 +104,11 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
             const playedColor = style.getPropertyValue('--color-looper-accent-played').trim();
             const unplayedColor = style.getPropertyValue('--color-looper-accent-unplayed').trim();
 
-            if (userMarkers.includes(i)) {
+            const isStartMarker = start <= startMarkerSample && end > startMarkerSample;
+            const isEndMarker = Math.abs(startMarkerSample - endMarkerSample) > samplesPerBar 
+                                && start <= endMarkerSample && end > endMarkerSample;
+
+            if ((isStartMarker || isEndMarker) && player.getUserStartMarker() > 0) {
                 ctx.fillStyle = markerColor;
             } else if (end > currentSample) {
                 ctx.fillStyle = playedColor;
@@ -171,7 +177,6 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
         const x = ev.clientX - rect.left; // x relative to canvas;
         const barWidth = rect.width / barCount;
         const clickedIndex = Math.floor(x / barWidth);
-        setUserMarkers([clickedIndex]);
 
         if (!audioBuffer) return;
         // Calculate at which frame we're currently at
@@ -180,6 +185,7 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
         const marker = clickedIndex * samplesPerBar;
 
         player.setUserStartMarker(marker);
+        player.setUserEndMarker(marker);
     }
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -219,7 +225,6 @@ const AudioWaveform = ({ userMarkers, setUserMarkers, player, audioBuffer, class
 
         player.setUserEndMarker(endMarker > startMarker ? endMarker : startMarker);
         player.setUserStartMarker(startMarker < endMarker ? startMarker : endMarker);
-        setUserMarkers([clickedIndex1, clickedIndex2 - 1]);
     }
 
     return (
