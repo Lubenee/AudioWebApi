@@ -8,6 +8,8 @@ import { useSnackbar } from "notistack";
 import { removeFileExtension } from "./Utils/File";
 import ChordDisplay, { type Chord } from "./ChordDisplay/ChordDisplay";
 import EffectsPanel from "./EffectsPanel/EffectsPanel";
+import localforage from "localforage";
+import { useSession } from "./Hooks/useSession";
 export default function App() {
   const { enqueueSnackbar } = useSnackbar();
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer>();
@@ -22,9 +24,16 @@ export default function App() {
   const [speed, setSpeed] = useState(1);
   const [filename, setFilename] = useState<string>("");
   const [zoom, setZoom] = useState(1);
+  const { isRestoring } = useSession(playerRef, {
+    filename, detune, speed, zoom, loop, showChords, showEffects, chords
+  }, {
+    setAudioBuffer, setFilename, setDetune, setSpeed, setZoom, setLoop, setShowChords, setShowEffects, setChords
+  });
 
   async function loadFile(file: File) {
-    const buff = await playerRef.current.loadFile(file);
+    const arrBuffer = await file.arrayBuffer();
+    await localforage.setItem("looper_audio_buffer", arrBuffer);
+    const buff = await playerRef.current.loadArrayBuffer(arrBuffer);
     setAudioBuffer(buff);
     setFilename(removeFileExtension(file.name));
 
@@ -96,6 +105,13 @@ export default function App() {
 
   return (
     <div className="bg-indigo-900 p-4 space-y-4 text-fuchsia-400">
+      {isRestoring && (
+        <div className="fixed inset-0 bg-indigo-950 flex flex-col items-center justify-center z-50">
+           <div className="text-teal-400 font-bold tracking-widest text-2xl animate-pulse mb-4">RESTORING SESSION...</div>
+           <div className="text-indigo-400">Loading audio data from local storage</div>
+        </div>
+      )}
+
       <div className="flex flex-row justify-between items-center p-2 gap-4 h-24 bg-amber-700 shadow-amber-800 shadow-retro">
         <div>
           <AudioUpload onChange={handleFileChange} />

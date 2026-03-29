@@ -133,13 +133,17 @@ export class AudioPlayer {
   getUserEndMarker(): number { return this.endUserMarker; }
 
   async loadFile(file: File): Promise<AudioBuffer> {
+    const arrBuffer = await file.arrayBuffer();
+    return this.loadArrayBuffer(arrBuffer);
+  }
+
+  async loadArrayBuffer(arrBuffer: ArrayBuffer): Promise<AudioBuffer> {
     this.stop(); 
     this.playbackOffset = 0; 
     this.startTime = 0; 
     this.startUserMarker = 0;
     this.endUserMarker = 0;
     
-    const arrBuffer = await file.arrayBuffer();
     // In case the context is suspended, we need to resume it on first user interaction
     if (this.audioCtx.state === 'suspended') {
       await this.audioCtx.resume();
@@ -169,6 +173,7 @@ export class AudioPlayer {
       this.source.detune.value = this.detune;
     }
   }
+  getDetuneSemitones() { return this.detune / 100; }
 
   setPlaybackRate(rate: number) {
     if (!this.paused && this.source) {
