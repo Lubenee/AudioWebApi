@@ -9,9 +9,14 @@ A web-based audio player and waveform visualizer built with React, Vite, and the
 - **Playback Controls:** Fully functional Play, Stop, and Resume tools that automatically synchronize out-of-the-box with your visual playhead marker.
 - **Real-time Tuning:** Uptune or Downtune the pitch and playback rate of your audio dynamically on the fly.
 
+## Why this project exists
+
+This project is created to more easily learn new songs by ear, practice playing along with them, and generally get a better understanding of the structure of songs. It's a clone of the "Transcribe!" windows app, but since I don't use windows, I decided to create my own version of it.
+
 ## Screenshots
 
 ![Looper Main Screen](docs/images/looper-main.png)
+![Looper Options Screen](docs/images/looper-options.png)
 
 ## Running the application
 
